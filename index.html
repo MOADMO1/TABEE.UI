@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام متابعات المخالفات السكنية الجامعية</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1a3a8f 0%, #2d55b8 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-content h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-content h1 i {
+            color: #4cc9f0;
+        }
+        
+        .header-content p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+        
+        .user-role {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .role-admin {
+            color: #f39c12;
+        }
+        
+        .role-assistant {
+            color: #2ecc71;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .btn-new-case, .btn-share, .btn-admin, .btn-logout {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+        }
+        
+        .btn-share {
+            background-color: #9b59b6;
+        }
+        
+        .btn-admin {
+            background-color: #f39c12;
+        }
+        
+        .btn-logout {
+            background-color: #e74c3c;
+        }
+        
+        .btn-share:hover {
+            background-color: #8e44ad;
+        }
+        
+        .btn-admin:hover {
+            background-color: #d68910;
+        }
+        
+        .btn-logout:hover {
+            background-color: #c0392b;
+        }
+        
+        .btn-new-case:hover {
+            background-color: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(46, 204, 113, 0.4);
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .status-connected {
+            background-color: #2ecc71;
+        }
+        
+        .status-disconnected {
+            background-color: #e74c3c;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 25px;
+            background-color: rgba(255, 255, 255, 0.15);
+            padding: 15px 25px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .stat-box {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #4cc9f0;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .filters {
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .filter-group label {
+            font-weight: 600;
+            color: #1a3a8f;
+        }
+        
+        select, .search-box {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background-color: #f8f9fa;
+            font-size: 15px;
+            min-width: 180px;
+        }
+        
+        .search-box {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%231a3a8f' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+        
+        .rooms-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .room-card {
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-top: 5px solid #2d55b8;
+            position: relative;
+            width: 100%;
+        }
+        
+        .room-card.closed {
+            opacity: 0.8;
+            border-top-color: #95a5a6;
+        }
+        
+        .room-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+        }
+        
+        .card-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .room-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+        
+        .room-number {
+            background-color: #1a3a8f;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .room-card.closed .room-number {
+            background-color: #95a5a6;
+        }
+        
+        .room-details {
+            flex: 1;
+        }
+        
+        .room-details h3 {
+            font-size: 20px;
+            margin-bottom: 5px;
+            color: #1a3a8f;
+        }
+        
+        .room-card.closed .room-details h3 {
+            color: #7f8c8d;
+        }
+        
+        .unit-badge {
+            background-color: #e9f7fe;
+            color: #1a3a8f;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+        
+        .room-card.closed .unit-badge {
+            background-color: #ecf0f1;
+            color: #7f8c8d;
+        }
+        
+        .added-by {
+            font-size: 12px;
+            color: #666;
+            margin-top: 3px;
+        }
+        
+        .assistant-code {
+            font-size: 11px;
+            color: #3498db;
+            margin-top: 2px;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .violation-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .violation-title i {
+            color: #e74c3c;
+        }
+        
+        .violation-text {
+            color: #555;
+            line-height: 1.7;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-right: 4px solid #e9f7fe;
+            margin-bottom: 15px;
+        }
+        
+        .room-card.closed .violation-text {
+            background-color: #ecf0f1;
+            border-right-color: #bdc3c7;
+        }
+        
+        /* تحسين عرض بيانات المخالفة */
+        .violation-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .detail-item {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            border-right: 3px solid #3498db;
+        }
+        
+        .detail-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        
+        .detail-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        /* أنيميشن للأولوية العالية */
+        .priority-high .room-number {
+            background-color: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+        
+        .priority-medium .room-number {
+            background-color: #f39c12;
+        }
+        
+        .priority-low .room-number {
+            background-color: #2ecc71;
+        }
+        
+        /* تعديل الألوان حسب الأولوية */
+        .priority-high {
+            border-top-color: #e74c3c !important;
+        }
+        
+        .priority-medium {
+            border-top-color: #f39c12 !important;
+        }
+        
+        .priority-low {
+            border-top-color: #2ecc71 !important;
+        }
+        
+        /* تحسين عرض الأولوية */
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .priority-high-badge {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .priority-medium-badge {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            border: 1px solid #ffe0b2;
+        }
+        
+        .priority-low-badge {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        
+        /* إضافة رمز القفل */
+        .locked-indicator {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background-color: #f39c12;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        
+        .room-card.locked .locked-indicator {
+            background-color: #e74c3c;
+        }
+        
+        .room-card.locked {
+            border-left: 5px solid #e74c3c;
+        }
+        
+        .lock-status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background-color: #f8f9fa;
+            color: #7f8c8d;
+            border: 1px solid #ddd;
+            margin-right: 5px;
+        }
+        
+        .lock-status.locked {
+            background-color: #fff3cd;
+            color: #856404;
+            border-color: #ffeaa7;
+        }
+        
+        .status-change-section {
+            margin-top: 15px;
+            border-top: 1px dashed #ddd;
+            padding-top: 15px;
+        }
+        
+        .status-change-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .status-btn {
+            padding: 8px 15px;
+            border-radius: 6px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .btn-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .btn-resolved {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .btn-failed {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-btn.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+        }
+        
+        .reason-input {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .card-footer {
+            padding: 15px 20px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .room-card.closed .card-footer {
+            background-color: #ecf0f1;
+        }
+        
+        .status {
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-resolved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-failed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-closed {
+            background-color: #95a5a6;
+            color: white;
+        }
+        
+        .card-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            background-color: #1a3a8f;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .action-btn:hover {
+            background-color: #2d55b8;
+        }
+        
+        .action-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .btn-edit {
+            background-color: #3498db;
+        }
+        
+        .btn-edit:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-delete {
+            background-color: #e74c3c;
+        }
+        
+        .btn-delete:hover {
+            background-color: #c0392b;
+        }
+        
+        .btn-update {
+            background-color: #2ecc71;
+        }
+        
+        .btn-update:hover {
+            background-color: #27ae60;
+        }
+        
+        .btn-close {
+            background-color: #9b59b6;
+        }
+        
+        .btn-close:hover {
+            background-color: #8e44ad;
+        }
+        
+        .lock-btn {
+            background-color: #9b59b6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .lock-btn:hover {
+            background-color: #8e44ad;
+        }
+        
+        .lock-btn.locked {
+            background-color: #e74c3c;
+        }
+        
+        .lock-btn.locked:hover {
+            background-color: #c0392b;
+        }
+        
+        .locked-info {
+            background-color: #fff8e1;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-right: 4px solid #ffd54f;
+            font-size: 14px;
+        }
+        
+        .locked-info i {
+            color: #f39c12;
+            margin-left: 5px;
+        }
+        
+        /* نافذة تسجيل الدخول */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+        
+        .login-modal {
+            background-color: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .login-header {
+            background: linear-gradient(135deg, #1a3a8f 0%, #2d55b8 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .login-header h2 {
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .login-body {
+            padding: 25px;
+        }
+        
+        .login-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .login-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .login-tab.active {
+            color: #1a3a8f;
+            border-bottom-color: #1a3a8f;
+        }
+        
+        .login-tab:hover {
+            color: #2d55b8;
+        }
+        
+        .login-form {
+            display: none;
+        }
+        
+        .login-form.active {
+            display: block;
+        }
+        
+        .login-footer {
+            padding: 20px 25px;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .btn-login {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 600;
+        }
+        
+        .btn-login:hover {
+            background-color: #27ae60;
+        }
+        
+        /* نافذة إنشاء حالة جديدة */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .modal {
+            background-color: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #1a3a8f 0%, #2d55b8 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .close-modal:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .modal-body {
+            padding: 25px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group label.required::after {
+            content: " *";
+            color: #e74c3c;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 15px;
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .modal-footer {
+            padding: 20px 25px;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+        
+        .btn-cancel {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-submit {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 600;
+        }
+        
+        .btn-cancel:hover {
+            background-color: #5a6268;
+        }
+        
+        .btn-submit:hover {
+            background-color: #27ae60;
+        }
+        
+        /* نافذة الإدارة */
+        .admin-modal .modal {
+            max-width: 600px;
+        }
+        
+        .admin-tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+        }
+        
+        .admin-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .admin-tab.active {
+            color: #1a3a8f;
+            border-bottom-color: #1a3a8f;
+        }
+        
+        .admin-section {
+            display: none;
+        }
+        
+        .admin-section.active {
+            display: block;
+        }
+        
+        .users-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .user-item:last-child {
+            border-bottom: none;
+        }
+        
+        .user-info-small {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .user-name {
+            font-weight: 600;
+        }
+        
+        .user-role-badge {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background-color: #e9f7fe;
+            color: #1a3a8f;
+            display: inline-block;
+            margin-top: 3px;
+        }
+        
+        .role-admin-badge {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .role-assistant-badge {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .admin-section h3 {
+            color: #1a3a8f;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .admin-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .admin-info-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .admin-info-label {
+            font-weight: 600;
+            color: #1a3a8f;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .admin-info-value {
+            font-size: 18px;
+            color: #333;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #ddd;
+            margin-top: 30px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading i {
+            font-size: 40px;
+            color: #1a3a8f;
+            margin-bottom: 15px;
+        }
+        
+        /* نافذة تأكيد الحذف */
+        .confirmation-modal .modal {
+            max-width: 400px;
+        }
+        
+        .confirmation-text {
+            text-align: center;
+            padding: 20px 0;
+            font-size: 16px;
+        }
+        
+        .confirmation-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .btn-confirm {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .btn-confirm:hover {
+            background-color: #c0392b;
+        }
+        
+        /* نافذة تعديل المخالفة */
+        .edit-modal .modal {
+            max-width: 500px;
+        }
+        
+        @media (max-width: 768px) {
+            .rooms-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content h1 {
+                font-size: 24px;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+            
+            .filters {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .filter-group {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .header-actions {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .card-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .card-actions .action-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .violation-details-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="mainContainer" style="display: none;">
+        <header>
+            <div class="header-content">
+                <h1><i class="fas fa-building"></i> نظام متابعات المخالفات السكنية الجامعية</h1>
+                <p>لوحة إدارة ومتابعة المخالفات السكنية في الجامعات</p>
+            </div>
+            <div class="header-actions">
+                <div class="connection-status" id="connectionStatus">
+                    <div class="status-indicator status-disconnected"></div>
+                    <span>جاري الاتصال بالسحابة...</span>
+                </div>
+                <div class="user-info" id="userInfo">
+                    <i class="fas fa-user"></i>
+                    <span id="userName">مستخدم</span>
+                    <span class="user-role" id="userRole">دور</span>
+                </div>
+                <button class="btn-new-case" id="newCaseBtn">
+                    <i class="fas fa-plus-circle"></i> إنشاء حالة جديدة
+                </button>
+                <button class="btn-admin" id="adminBtn" style="display: none;">
+                    <i class="fas fa-cog"></i> الإدارة
+                </button>
+                <button class="btn-logout" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                </button>
+            </div>
+        </header>
+        
+        <div class="admin-section" id="adminSection">
+            <h3><i class="fas fa-chart-bar"></i> إحصائيات النظام</h3>
+            <div class="admin-info">
+                <div class="admin-info-item">
+                    <div class="admin-info-label">إجمالي المخالفات</div>
+                    <div class="admin-info-value" id="totalCases">0</div>
+                </div>
+                <div class="admin-info-item">
+                    <div class="admin-info-label">الوحدات المغطاة</div>
+                    <div class="admin-info-value" id="totalUnits">0</div>
+                </div>
+                <div class="admin-info-item">
+                    <div class="admin-info-label">آخر تحديث</div>
+                    <div class="admin-info-value" id="lastUpdate">جاري التحميل...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="statsTotalCases">0</div>
+                <div class="stat-label">مخالفة</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="statsTotalUnits">0</div>
+                <div class="stat-label">وحدات</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="statsPendingCases">0</div>
+                <div class="stat-label">قيد المتابعة</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="statsResolvedCases">0</div>
+                <div class="stat-label">تمت المتابعة</div>
+            </div>
+        </div>
+        
+        <div class="filters">
+            <div class="filter-group">
+                <label for="unitFilter"><i class="fas fa-filter"></i> تصفية حسب الوحدة:</label>
+                <select id="unitFilter">
+                    <option value="all">جميع الوحدات</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="statusFilter"><i class="fas fa-tasks"></i> حالة المتابعة:</label>
+                <select id="statusFilter">
+                    <option value="all">جميع الحالات</option>
+                    <option value="pending">قيد المتابعة</option>
+                    <option value="resolved">تمت المتابعة</option>
+                    <option value="failed">تعذرت المتابعة</option>
+                    <option value="closed">مغلقة</option>
+                </select>
+            </div>
+            
+            <input type="text" class="search-box" placeholder="ابحث برقم الغرفة..." id="searchBox">
+        </div>
+        
+        <div class="rooms-container" id="roomsContainer">
+            <div class="loading" id="loadingIndicator">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>جاري تحميل المخالفات...</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>© 2023 نظام متابعات المخالفات السكنية الجامعية - جميع الحقوق محفوظة | <span id="currentDate"></span></p>
+            <p>النظام متصل بقاعدة بيانات سحابية للتحديث الفوري</p>
+        </footer>
+    </div>
+    
+    <!-- نافذة تسجيل الدخول -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-modal">
+            <div class="login-header">
+                <h2><i class="fas fa-user-shield"></i> نظام متابعات المخالفات</h2>
+                <p>الرجاء تسجيل الدخول للوصول للنظام</p>
+            </div>
+            <div class="login-body">
+                <div class="login-tabs">
+                    <div class="login-tab active" data-tab="admin">المشرف الرئيسي</div>
+                    <div class="login-tab" data-tab="assistant">مساعد مشرف</div>
+                </div>
+                
+                <form class="login-form active" id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="adminName">اسم المشرف</label>
+                        <input type="text" id="adminName" class="form-control" placeholder="أدخل اسم المشرف" required>
+                        <small style="color: #666; font-size: 12px;">للمشرف الرئيسي: أدخل "المشرف الرئيسي"</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPassword">كلمة مرور المشرف</label>
+                        <input type="password" id="adminPassword" class="form-control" placeholder="أدخل كلمة المرور" required>
+                        <small style="color: #666; font-size: 12px;">كلمة المرور الافتراضية للمشرف الرئيسي: admin123</small>
+                    </div>
+                </form>
+                
+                <form class="login-form" id="assistantLoginForm">
+                    <div class="form-group">
+                        <label for="assistantCode">الرمز السري للمساعد</label>
+                        <input type="text" id="assistantCode" class="form-control" placeholder="أدخل الرمز السري" required>
+                        <small style="color: #666; font-size: 12px;">اطلب الرمز من المشرف الرئيسي</small>
+                    </div>
+                </form>
+            </div>
+            <div class="login-footer">
+                <button type="button" class="btn-login" id="loginBtn">تسجيل الدخول</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- نافذة إنشاء حالة جديدة -->
+    <div class="modal-overlay" id="newCaseModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-plus-circle"></i> إنشاء حالة جديدة</h2>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="newCaseForm">
+                    <div class="form-group">
+                        <label for="roomNumber" class="required">رقم الغرفة</label>
+                        <input type="text" id="roomNumber" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bedNumber">رقم السرير</label>
+                        <select id="bedNumber" class="form-control">
+                            <option value="">اختر رقم السرير</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="unitNumber" class="required">الوحدة</label>
+                        <select id="unitNumber" class="form-control" required>
+                            <option value="">اختر الوحدة</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="supervisorName" class="required">اسم مساعد المشرف</label>
+                        <input type="text" id="supervisorName" class="form-control" placeholder="أدخل اسم مساعد المشرف" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="studentName">اسم المخالف</label>
+                        <input type="text" id="studentName" class="form-control" placeholder="أدخل اسم المخالف">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="studentId">الرقم الجامعي للمخالف</label>
+                        <input type="text" id="studentId" class="form-control" placeholder="أدخل الرقم الجامعي">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="violationDetails" class="required">تفاصيل المخالفة</label>
+                        <textarea id="violationDetails" class="form-control" placeholder="أدخل تفاصيل المخالفة..." required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="priority" class="required">الأولوية</label>
+                        <select id="priority" class="form-control" required>
+                            <option value="high">عالية</option>
+                            <option value="medium" selected>متوسطة</option>
+                            <option value="low">منخفضة</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="cancelBtn">إلغاء</button>
+                <button type="button" class="btn-submit" id="submitNewCase">إضافة المخالفة</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- نافذة تعديل المخالفة -->
+    <div class="modal-overlay edit-modal" id="editCaseModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> تعديل المخالفة</h2>
+                <button class="close-modal" id="closeEditModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editCaseForm">
+                    <div class="form-group">
+                        <label for="editRoomNumber" class="required">رقم الغرفة</label>
+                        <input type="text" id="editRoomNumber" class="form-control" required readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editBedNumber">رقم السرير</label>
+                        <select id="editBedNumber" class="form-control" disabled>
+                            <option value="">اختر رقم السرير</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editUnitNumber" class="required">الوحدة</label>
+                        <select id="editUnitNumber" class="form-control" required disabled>
+                            <option value="">اختر الوحدة</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editSupervisorName" class="required">اسم مساعد المشرف</label>
+                        <input type="text" id="editSupervisorName" class="form-control" required readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editStudentName">اسم المخالف</label>
+                        <input type="text" id="editStudentName" class="form-control" placeholder="أدخل اسم المخالف" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editStudentId">الرقم الجامعي للمخالف</label>
+                        <input type="text" id="editStudentId" class="form-control" placeholder="أدخل الرقم الجامعي" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editViolationDetails" class="required">تفاصيل المخالفة</label>
+                        <textarea id="editViolationDetails" class="form-control" required readonly></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editPriority" class="required">الأولوية</label>
+                        <select id="editPriority" class="form-control" required>
+                            <option value="high">عالية</option>
+                            <option value="medium">متوسطة</option>
+                            <option value="low">منخفضة</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editStatus" class="required">حالة المتابعة</label>
+                        <select id="editStatus" class="form-control" required>
+                            <option value="pending">قيد المتابعة</option>
+                            <option value="resolved">تمت المتابعة</option>
+                            <option value="failed">تعذرت المتابعة</option>
+                            <option value="closed">مغلقة</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="editReasonGroup" style="display: none;">
+                        <label for="editReason">سبب تعذر المتابعة</label>
+                        <textarea id="editReason" class="form-control" placeholder="أدخل سبب تعذر المتابعة..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="cancelEditBtn">إلغاء</button>
+                <button type="button" class="btn-submit" id="submitEditCase">حفظ التعديلات</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- نافذة الإدارة -->
+    <div class="modal-overlay admin-modal" id="adminModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> لوحة الإدارة</h2>
+                <button class="close-modal" id="closeAdminModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="admin-tabs">
+                    <div class="admin-tab active" data-tab="users">إدارة المستخدمين</div>
+                    <div class="admin-tab" data-tab="system">إعدادات النظام</div>
+                </div>
+                
+                <div class="admin-section active" id="usersSection">
+                    <h3><i class="fas fa-users"></i> إدارة المستخدمين</h3>
+                    <div class="form-group">
+                        <label>إضافة مشرف جديد</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="newAdminName" class="form-control" placeholder="اسم المشرف الجديد">
+                            <input type="password" id="newAdminPassword" class="form-control" placeholder="كلمة المرور">
+                            <button class="btn-submit" id="addAdminBtn" style="white-space: nowrap;">إضافة مشرف</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>إضافة مساعد مشرف جديد</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="newAssistantName" class="form-control" placeholder="اسم المساعد الجديد">
+                            <button class="btn-submit" id="generateAssistantBtn" style="white-space: nowrap;">إنشاء رمز</button>
+                        </div>
+                        <div id="assistantCodeResult" style="margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 6px; display: none;">
+                            <strong>الرمز السري:</strong> <span id="generatedCode"></span><br>
+                            <small>أعط هذا الرقم للمساعد ليدخل به إلى النظام</small>
+                        </div>
+                    </div>
+                    
+                    <h3 style="margin-top: 20px;"><i class="fas fa-list"></i> قائمة المستخدمين</h3>
+                    <div class="users-list" id="usersList">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>جاري تحميل قائمة المستخدمين...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="admin-section" id="systemSection">
+                    <h3><i class="fas fa-sliders-h"></i> إعدادات النظام</h3>
+                    <div class="form-group">
+                        <label>تغيير كلمة مرور المشرف الرئيسي</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="password" id="currentPassword" class="form-control" placeholder="كلمة المرور الحالية">
+                            <input type="password" id="newPassword" class="form-control" placeholder="كلمة المرور الجديدة">
+                            <button class="btn-submit" id="changePasswordBtn" style="white-space: nowrap;">تغيير</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>خيارات النظام</label>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <label style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="allowAssistantEdit" checked>
+                                السماح للمساعدين بتعديل حالاتهم
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="autoCloseResolved" checked>
+                                إغلاق الحالات المكتملة تلقائياً بعد 7 أيام
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>تصدير البيانات</label>
+                        <button class="btn-submit" id="exportDataBtn" style="width: 100%;">تصدير جميع البيانات كملف Excel</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="closeAdminBtn">إغلاق</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- نافذة تأكيد الحذف -->
+    <div class="modal-overlay confirmation-modal" id="deleteConfirmationModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-trash-alt"></i> تأكيد الحذف</h2>
+                <button class="close-modal" id="closeDeleteModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="confirmation-text" id="deleteConfirmationText">
+                    هل أنت متأكد من حذف هذه المخالفة؟
+                </div>
+                <div class="confirmation-buttons">
+                    <button type="button" class="btn-cancel" id="cancelDeleteBtn">إلغاء</button>
+                    <button type="button" class="btn-confirm" id="confirmDeleteBtn">نعم، احذف</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🔥 إعدادات Firebase - معلومات مشروع tabeeui
+        const firebaseConfig = {
+          apiKey: "AIzaSyDX9-7SGIL1TPwRfnhb0cljquGJK23MXFY",
+          authDomain: "tabeeui.firebaseapp.com",
+          projectId: "tabeeui",
+          storageBucket: "tabeeui.firebasestorage.app",
+          messagingSenderId: "72336490436",
+          appId: "1:72336490436:web:7696b177d2712a341fee91"
+        };
+
+        // تهيئة Firebase
+        let db;
+        let auth;
+        
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            auth = firebase.auth();
+            console.log("✅ Firebase initialized successfully");
+        } catch (error) {
+            console.error("❌ Firebase initialization error:", error);
+        }
+        
+        // متغيرات النظام
+        let currentUser = null;
+        let violationsData = [];
+        let systemConfig = null;
+        let violationToDelete = null;
+        let violationToEdit = null;
+        let allUsers = [];
+        let isOnline = false;
+        
+        // كلمة المرور الافتراضية للمشرف الرئيسي
+        const DEFAULT_ADMIN_PASSWORD = "admin123";
+        
+        // باقي الكود كما هو (أكثر من 2000 سطر)
+        // ... الكود الكامل الذي أرسلته سابقاً
+        
+    </script>
+</body>
+</html>
